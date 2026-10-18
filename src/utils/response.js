@@ -16,10 +16,10 @@ const sendPaginated = (res, statusCode = 200, message = 'Success', data = [], pa
     message,
     data,
     pagination: {
-      total: pagination.total || 0,
-      page: pagination.page || 1,
-      limit: pagination.limit || 10,
-      totalPages: pagination.totalPages || 0,
+      total: Number(pagination.total) || 0,
+      page: Number(pagination.page) || 1,
+      limit: Number(pagination.limit) || 10,
+      totalPages: Number(pagination.totalPages) || 0,
     },
   });
 };

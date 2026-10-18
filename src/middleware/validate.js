@@ -12,9 +12,10 @@ const validate = (schema) => async (req, res, next) => {
     if (parsed.params) req.params = parsed.params;
     return next();
   } catch (error) {
-    if (error.errors) {
-      const formattedErrors = error.errors.map((err) => ({
-        field: err.path.slice(1).join('.'),
+    const issues = error.issues || error.errors;
+    if (issues && Array.isArray(issues)) {
+      const formattedErrors = issues.map((err) => ({
+        field: err.path.slice(1).join('.') || err.path.join('.'),
         message: err.message,
       }));
       return sendError(res, 400, 'Validation failed', formattedErrors);
