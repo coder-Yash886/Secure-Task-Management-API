@@ -61,6 +61,10 @@ app.get('/api/v1/health', async (req, res, next) => {
 });
 
 
+const authRoutes = require('./routes/auth.routes');
+
+app.use('/api/v1/auth', authRoutes);
+
 app.use(notFoundHandler);
 app.use(errorHandler);
 
