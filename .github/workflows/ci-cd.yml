@@ -114,9 +114,10 @@ jobs:
     name: 🚀 Deploy to AWS EC2
     runs-on: ubuntu-latest
     needs: [test, docker-build]
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/yashdev' || github.ref == 'refs/heads/Version-1') && secrets.EC2_HOST != ''
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/yashdev' || github.ref == 'refs/heads/Version-1'
     steps:
       - name: Deploy to AWS EC2 via SSH
+        if: ${{ secrets.EC2_HOST != '' }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -149,6 +150,7 @@ jobs:
     if: always() && (needs.deploy.result == 'success')
     steps:
       - name: Query Live Production API Health
+        if: ${{ secrets.EC2_HOST != '' }}
         run: |
           echo "Testing live deployment health..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://secure-task.yashkumar.me/health)
