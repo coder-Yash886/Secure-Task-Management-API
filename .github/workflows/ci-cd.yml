@@ -8,9 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ============================================================================
-  # Stage 1: Code Quality & Static Analysis
-  # ============================================================================
+  
   lint:
     name: 🔍 Lint & Code Quality
     runs-on: ubuntu-latest
@@ -48,9 +46,7 @@ jobs:
       - name: Run NPM Security Audit
         run: npm audit --audit-level=high || true
 
-  # ============================================================================
-  # Stage 3: Automated Integration Tests with Ephemeral Postgres
-  # ============================================================================
+  
   test:
     name: 🧪 Automated Test Suite (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
@@ -100,9 +96,7 @@ jobs:
           JWT_EXPIRES_IN: 7d
         run: npm test
 
-  # ============================================================================
-  # Stage 4: Docker Build & Verification
-  # ============================================================================
+  
   docker-build:
     name: 🐳 Docker Container Build & Verify
     runs-on: ubuntu-latest
@@ -124,9 +118,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ============================================================================
-  # Stage 5: Continuous Deployment (CD) to AWS EC2
-  # ============================================================================
+  
   deploy:
     name: 🚀 Deploy to AWS EC2
     runs-on: ubuntu-latest
@@ -161,9 +153,7 @@ jobs:
             
             echo "==> Deployment to AWS EC2 finished successfully!"
 
-  # ============================================================================
-  # Stage 6: Post-Deployment Live Health Check (Smoke Test)
-  # ============================================================================
+ 
   smoke-test:
     name: 🩺 Post-Deployment Live Health Check
     runs-on: ubuntu-latest
@@ -175,8 +165,8 @@ jobs:
           echo "Testing live deployment health..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://secure-task.yashkumar.me/health)
           if [ "$STATUS" -eq 200 ]; then
-            echo "✅ Live Health check passed with HTTP 200!"
+            echo " Live Health check passed with HTTP 200!"
           else
-            echo "❌ Live Health check failed with HTTP $STATUS"
+            echo " Live Health check failed with HTTP $STATUS"
             exit 1
           fi
