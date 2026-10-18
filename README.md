@@ -1,14 +1,16 @@
 # TaskFlow — Secure Task Management API
 
-> A robust, secure, and production-ready RESTful backend API for managing collaborative projects and tasks with multi-tenant access control, atomic status audit history, and automated testing.
+> A robust, secure, and production-ready RESTful backend API for managing collaborative projects and tasks with multi-tenant access control, atomic status audit history, automated testing, containerization, and continuous integration/continuous deployment (CI/CD).
 
 Built as part of the Backend Developer Intern selection assignment at **Karya Saarthi**.
 
 [![Live AWS Deployment](https://img.shields.io/badge/AWS-EC2%20Deployed-FF9900?logo=amazon-aws&logoColor=white)](https://secure-task.yashkumar.me)
 [![SSL / HTTPS](https://img.shields.io/badge/SSL-Let's%20Encrypt%20Active-003A70?logo=letsencrypt&logoColor=white)](https://secure-task.yashkumar.me)
+[![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white)](.github/workflows/ci-cd.yml)
+[![Dockerized](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
 [![Database](https://img.shields.io/badge/PostgreSQL-Neon%20Serverless%20SSL-00E599?logo=postgresql&logoColor=white)](https://neon.tech)
 [![Node Version](https://img.shields.io/badge/Node.js-v22%20LTS-339933?logo=node.js&logoColor=white)](https://nodejs.org)
-[![Automated Tests](https://img.shields.io/badge/Jest-21%2F21%20Passing-C21325?logo=jest&logoColor=white)](tests/)
+[![Automated Tests](https://img.shields.io/badge/Jest-23%2F23%20Passing-C21325?logo=jest&logoColor=white)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -99,28 +101,16 @@ curl -X POST https://secure-task.yashkumar.me/api/v1/auth/login \
 
 ---
 
-## 📮 Postman Collection
-
-A complete, pre-configured Postman Collection is available directly in this repository:
-[`postman_collection.json`](postman_collection.json)
-
-### How to use:
-1. Open **Postman** &rarr; Click **Import** &rarr; Select `postman_collection.json`.
-2. The collection is pre-configured with:
-   - `{{base_url}}`: `https://secure-task.yashkumar.me` (or `http://localhost:5000` for local dev)
-   - Auto-saving JWT scripts: Registering or logging in automatically sets the `{{auth_token}}` variable!
-   - 18 sample requests spanning Authentication, Project Management, Member Invitations, Task CRUD, Search/Filter/Pagination, and Audit Trails.
-
----
-
 ## Table of Contents
-1. [Production Deployment Architecture](#production-deployment-architecture)
-2. [Tech Stack](#tech-stack)
-3. [Architecture & Key Technical Decisions](#architecture--key-technical-decisions)
-4. [Database Schema & ER Diagram](#database-schema--er-diagram)
-5. [API Endpoints Reference](#api-endpoints-reference)
-6. [Automated Test Results](#automated-test-results)
-7. [Local Setup & Installation](#local-setup--installation)
+1. [Production Deployment Architecture](#1-production-deployment-architecture)
+2. [Tech Stack](#2-tech-stack)
+3. [Architecture & Key Technical Decisions](#3-architecture--key-technical-decisions)
+4. [Database Schema & ER Diagram](#4-database-schema--er-diagram)
+5. [API Endpoints Reference](#5-api-endpoints-reference)
+6. [Automated Test Results](#6-automated-test-results)
+7. [Docker & Containerization](#7-docker--containerization)
+8. [CI/CD Pipeline (GitHub Actions)](#8-cicd-pipeline-github-actions)
+9. [Local Setup & Installation](#9-local-setup--installation)
 
 ---
 
@@ -154,6 +144,8 @@ flowchart TD
 ## 2. Tech Stack
 
 - **Runtime & Framework**: Node.js (v22), Express.js (v5)
+- **Containerization**: Docker, Docker Compose, Multi-Stage Builds
+- **CI/CD**: GitHub Actions (Lint, Security Audit, Ephemeral Postgres Tests, Docker Verification, Automated SSH Deploy, Smoke Test)
 - **Cloud Infrastructure**: AWS EC2, Nginx, Let's Encrypt Certbot, PM2
 - **Database**: PostgreSQL (Hosted on Neon Serverless Postgres with SSL connection pool)
 - **Security & Validation**: JWT (`jsonwebtoken`), Bcrypt (`bcrypt`), Zod (`zod`), Helmet (`helmet`), CORS (`cors`), Rate Limiting (`express-rate-limit`)
@@ -186,14 +178,17 @@ Routes  -->  Middlewares  -->  Controllers  -->  Services  -->  PostgreSQL Pool 
 3. **Multi-Tenant Access Isolation (Requirement 4)**:
    - Projects and tasks enforce strict boundaries. Even with a valid JWT token, users are restricted to projects where they are registered as `owner` or `member`. Unauthorized attempts return `403 Forbidden`.
 
-4. **Security Best Practices**:
+4. **Reverse Proxy Trust Configuration**:
+   - Configured `app.set('trust proxy', 1)` to allow Express and rate-limiters to accurately read real client IP addresses through the Nginx reverse proxy headers (`X-Forwarded-For`).
+
+5. **Security Best Practices**:
    - Passwords hashed with `bcrypt` (10 salt rounds with unique cryptographic salts).
    - JWT stateless authentication with configurable expiration.
    - Brute-force protection on authentication routes using `express-rate-limit`.
    - Security HTTP headers enabled via `helmet()`.
    - Centralized error handling mapping raw Postgres codes (e.g., `23505` duplicate key to `409 Conflict`, `22P02` to `400 Bad Request`) to avoid leaking database internals.
 
-5. **Decoupled Server Entrypoint (`app.js` vs `server.js`)**:
+6. **Decoupled Server Entrypoint (`app.js` vs `server.js`)**:
    - Separating `app.js` from `server.js` enables Supertest to run fast integration tests in-memory without binding ports, preventing port collisions during parallel test runs.
 
 ---
@@ -334,11 +329,80 @@ npm test
 
 ---
 
-## 7. Local Setup & Installation
+## 7. Docker & Containerization
+
+The project is fully containerized using a hardened multi-stage `Dockerfile` and `docker-compose.yml`.
+
+### Docker Architecture Features:
+- **Multi-Stage Build**: Keeps production image tiny by discarding build tools and devDependencies.
+- **Alpine Base (`node:22-alpine`)**: Minimal attack surface with `dumb-init` for proper signal handling.
+- **Non-Root Execution**: Runs under unprivileged user `node`.
+- **Integrated Health Check**: Monitors application vitality via `/health`.
+
+### Running with Docker Compose (1 Command):
+```bash
+docker compose up --build -d
+```
+This spins up:
+1. `taskflow_api`: The containerized API exposed at `http://localhost:5000`.
+2. `taskflow_postgres`: A dedicated PostgreSQL 16 Alpine container with database volume persistence for offline development.
+
+To stop the containers:
+```bash
+docker compose down
+```
+
+### Building & Running Standalone Docker Image:
+```bash
+# 1. Build the image
+docker build -t taskflow-api:latest .
+
+# 2. Run the container
+docker run -d -p 5000:5000 --env-file .env --name taskflow_app taskflow-api:latest
+```
+
+---
+
+## 8. CI/CD Pipeline (GitHub Actions)
+
+A battle-tested CI/CD workflow is defined in [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) with 6 automated stages:
+
+```mermaid
+flowchart LR
+    Push["Git Push / PR"] --> Lint["1. Lint & Format (ESLint)"]
+    Lint --> Sec["2. Security Scan (npm audit)"]
+    Sec --> Test["3. Automated Tests (Matrix Node 20/22 & Ephemeral Postgres)"]
+    Test --> Docker["4. Docker Build & Layer Verification"]
+    Docker --> Deploy["5. Zero-Downtime EC2 SSH Deploy"]
+    Deploy --> Smoke["6. Post-Deploy Smoke Test (/health HTTP 200)"]
+```
+
+### Pipeline Stages Explained:
+1. **Lint & Code Quality**: Enforces code consistency and catches syntax errors with ESLint flat config.
+2. **Security Vulnerability Scan**: Scans npm package tree against known CVEs (`npm audit --audit-level=high`).
+3. **Automated Matrix Integration Tests**:
+   - Boots an ephemeral PostgreSQL service container inside the GitHub runner.
+   - Runs database migrations (`node db/migrate.js`).
+   - Executes the 23-test Jest suite across both Node.js 20 and 22.
+4. **Docker Image Build & Verification**: Uses `docker/build-push-action` with GitHub Actions layer caching to guarantee images build without errors.
+5. **Continuous Deployment (CD) to AWS EC2**:
+   - Authenticates to AWS EC2 via secure SSH keys (`appleboy/ssh-action`).
+   - Pulls the latest commits, installs dependencies, runs database migrations, and triggers `pm2 reload` for zero downtime.
+6. **Live Post-Deploy Health Check**: Automatically sends a curl request to `https://secure-task.yashkumar.me/health` to confirm the deployment is healthy and responding.
+
+### Secrets required in GitHub Repository Settings (`Settings -> Secrets and variables -> Actions`):
+- `EC2_HOST`: IP address or domain (`secure-task.yashkumar.me`)
+- `EC2_USER`: `ubuntu`
+- `EC2_SSH_KEY`: Your private SSH key (`.pem` file content)
+
+---
+
+## 9. Local Setup & Installation
 
 ### Prerequisites
 - Node.js >= 18
 - PostgreSQL or Neon Database URL
+- Docker (Optional, for containerized run)
 
 ### Steps
 1. **Clone the repository**:

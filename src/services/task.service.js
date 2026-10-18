@@ -207,7 +207,7 @@ const getTaskById = async (taskId, userId) => {
 };
 
 const updateTask = async (taskId, userId, fields) => {
-  const existing = await getTaskById(taskId, userId);
+  await getTaskById(taskId, userId);
 
   if (fields.assignedTo) {
     const userCheck = await query('SELECT id FROM users WHERE id = $1', [fields.assignedTo]);
