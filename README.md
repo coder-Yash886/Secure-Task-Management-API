@@ -101,20 +101,6 @@ curl -X POST https://secure-task.yashkumar.me/api/v1/auth/login \
 
 ---
 
-## 📮 Postman Collection
-
-A complete, pre-configured Postman Collection is available directly in this repository:
-[`postman_collection.json`](postman_collection.json)
-
-### How to use:
-1. Open **Postman** &rarr; Click **Import** &rarr; Select `postman_collection.json`.
-2. The collection is pre-configured with:
-   - `{{base_url}}`: `https://secure-task.yashkumar.me` (or `http://localhost:5000` for local dev)
-   - Auto-saving JWT scripts: Registering or logging in automatically sets the `{{auth_token}}` variable!
-   - 18 sample requests spanning Authentication, Project Management, Member Invitations, Task CRUD, Search/Filter/Pagination, and Audit Trails.
-
----
-
 ## Table of Contents
 1. [Production Deployment Architecture](#1-production-deployment-architecture)
 2. [Tech Stack](#2-tech-stack)
