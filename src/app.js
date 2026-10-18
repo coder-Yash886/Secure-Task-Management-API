@@ -63,9 +63,12 @@ app.get('/api/v1/health', async (req, res, next) => {
 
 const authRoutes = require('./routes/auth.routes');
 const projectRoutes = require('./routes/project.routes');
+const taskRoutes = require('./routes/task.routes');
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/projects', projectRoutes);
+app.use('/api/v1/projects/:projectId/tasks', taskRoutes);
+app.use('/api/v1/tasks', taskRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
