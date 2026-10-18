@@ -1,8 +1,9 @@
+const path = require('path');
 const { Pool } = require('pg');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 if (!process.env.DATABASE_URL) {
-  console.warn('⚠️ WARNING: DATABASE_URL is not set in .env file!');
+  console.warn(' WARNING: DATABASE_URL is not set in .env file!');
 }
 
 const isProduction = process.env.NODE_ENV === 'production';
