@@ -1,8 +1,8 @@
 {
   "name": "secure-task-management-api",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Secure Task Management RESTful API with Role-Based Access Control, Status Audit History, and Automated Tests",
+  "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
@@ -11,9 +11,19 @@
     "test": "cross-env NODE_ENV=test jest --runInBand --coverage",
     "lint": "eslint src tests"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "express",
+    "postgresql",
+    "neon",
+    "jwt",
+    "rbac",
+    "rest-api",
+    "task-management",
+    "zod",
+    "jest"
+  ],
+  "author": "Yash Kumar",
+  "license": "MIT",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
