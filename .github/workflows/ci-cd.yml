@@ -28,9 +28,7 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-  # ============================================================================
-  # Stage 2: Security & Vulnerability Audit
-  # ============================================================================
+
   security-audit:
     name: 🛡️ Security Vulnerability Scan
     runs-on: ubuntu-latest
@@ -117,7 +115,6 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/yashdev' || github.ref == 'refs/heads/Version-1'
     steps:
       - name: Deploy to AWS EC2 via SSH
-        if: ${{ secrets.EC2_HOST != '' }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -142,21 +139,19 @@ jobs:
             
             echo "==> Deployment to AWS EC2 finished successfully!"
 
- 
   smoke-test:
     name: 🩺 Post-Deployment Live Health Check
     runs-on: ubuntu-latest
     needs: [deploy]
-    if: always() && (needs.deploy.result == 'success')
     steps:
       - name: Query Live Production API Health
-        if: ${{ secrets.EC2_HOST != '' }}
         run: |
           echo "Testing live deployment health..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://secure-task.yashkumar.me/health)
           if [ "$STATUS" -eq 200 ]; then
-            echo " Live Health check passed with HTTP 200!"
+            echo "Live Health check passed with HTTP 200!"
           else
-            echo " Live Health check failed with HTTP $STATUS"
+            echo "Live Health check failed with HTTP $STATUS"
             exit 1
           fi
+
