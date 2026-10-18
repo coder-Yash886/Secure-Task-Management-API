@@ -1,6 +1,5 @@
 const request = require('supertest');
 const app = require('../src/app');
-const { pool } = require('../src/config/db');
 
 describe('Health Check Endpoints (Requirement 9)', () => {
   afterAll(async () => {

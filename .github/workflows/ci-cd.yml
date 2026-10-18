@@ -1,0 +1,182 @@
+name: TaskFlow CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, yashdev, Version-1 ]
+  pull_request:
+    branches: [ main, yashdev ]
+  workflow_dispatch:
+
+jobs:
+  # ============================================================================
+  # Stage 1: Code Quality & Static Analysis
+  # ============================================================================
+  lint:
+    name: 🔍 Lint & Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v22)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  # ============================================================================
+  # Stage 2: Security & Vulnerability Audit
+  # ============================================================================
+  security-audit:
+    name: 🛡️ Security Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v22)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run NPM Security Audit
+        run: npm audit --audit-level=high || true
+
+  # ============================================================================
+  # Stage 3: Automated Integration Tests with Ephemeral Postgres
+  # ============================================================================
+  test:
+    name: 🧪 Automated Test Suite (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    needs: [lint]
+    strategy:
+      matrix:
+        node-version: [20, 22]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: taskflow_test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Database Migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/taskflow_test_db
+        run: node db/migrate.js
+
+      - name: Execute Jest Test Suite
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/taskflow_test_db
+          JWT_SECRET: ci_cd_test_secret_key_minimum_32_characters_long
+          JWT_EXPIRES_IN: 7d
+        run: npm test
+
+  # ============================================================================
+  # Stage 4: Docker Build & Verification
+  # ============================================================================
+  docker-build:
+    name: 🐳 Docker Container Build & Verify
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: actions/setup-buildx-action@v3
+
+      - name: Build Docker Image (Dry-Run Test)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: secure-task-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================================
+  # Stage 5: Continuous Deployment (CD) to AWS EC2
+  # ============================================================================
+  deploy:
+    name: 🚀 Deploy to AWS EC2
+    runs-on: ubuntu-latest
+    needs: [test, docker-build]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/yashdev'
+    steps:
+      - name: Deploy to AWS EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        if: env.EC2_HOST != ''
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER || 'ubuntu' }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            echo "==> Navigating to project directory..."
+            cd ~/Secure-Task-Management-API || cd Secure-Task-Management-API
+            
+            echo "==> Fetching latest changes from branch..."
+            git pull origin ${{ github.ref_name }}
+            
+            echo "==> Installing production dependencies..."
+            npm ci --omit=dev
+            
+            echo "==> Running database migrations..."
+            npm run migrate
+            
+            echo "==> Reloading PM2 process zero-downtime..."
+            pm2 reload task-api || pm2 restart all
+            
+            echo "==> Deployment to AWS EC2 finished successfully!"
+
+  # ============================================================================
+  # Stage 6: Post-Deployment Live Health Check (Smoke Test)
+  # ============================================================================
+  smoke-test:
+    name: 🩺 Post-Deployment Live Health Check
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always() && (needs.deploy.result == 'success')
+    steps:
+      - name: Query Live Production API Health
+        run: |
+          echo "Testing live deployment health..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://secure-task.yashkumar.me/health)
+          if [ "$STATUS" -eq 200 ]; then
+            echo "✅ Live Health check passed with HTTP 200!"
+          else
+            echo "❌ Live Health check failed with HTTP $STATUS"
+            exit 1
+          fi
