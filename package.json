@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "migrate": "node db/migrate.js",
+    "db:test": "node db/test-connection.js",
     "test": "cross-env NODE_ENV=test jest --runInBand --coverage",
     "lint": "eslint src tests"
   },
