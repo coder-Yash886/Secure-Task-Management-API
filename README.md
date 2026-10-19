@@ -21,7 +21,6 @@ The API is fully deployed in production on **Amazon Web Services (AWS)** with an
 
 - **Base URL**: [`https://secure-task.yashkumar.me`](https://secure-task.yashkumar.me)
 - **API Version 1**: [`https://secure-task.yashkumar.me/api/v1`](https://secure-task.yashkumar.me/api/v1)
-- **API Interactive Docs**: [`https://secure-task.yashkumar.me/api/v1/docs`](https://secure-task.yashkumar.me/api/v1/docs)
 - **Basic Health Check**: [`https://secure-task.yashkumar.me/health`](https://secure-task.yashkumar.me/health)
 - **Deep Database Health Check**: [`https://secure-task.yashkumar.me/api/v1/health`](https://secure-task.yashkumar.me/api/v1/health)
 
